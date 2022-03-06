@@ -1,6 +1,5 @@
-import 'package:flutter/cupertino.dart';
-
 import 'package:flutter_good_ui/ui/index.dart';
+import 'package:flutter/material.dart';
 
 class NavigatorUtil {
   static Map<String, WidgetBuilder> Routes = {
