@@ -1,14 +1,13 @@
 import "dart:math";
 import "package:flutter/material.dart";
 import 'package:flutter_good_ui/util/extension_util.dart';
-// import 'package:quantity/quantity.dart';
 import 'package:decimal/decimal.dart';
 
 double sphereRadius = 300;
 
 class Sphere extends StatefulWidget {
   final int starNum;
-  const Sphere({Key? key, this.starNum = 20}) : super(key: key);
+  const Sphere({Key? key, this.starNum = 300}) : super(key: key);
 
   @override
   State<Sphere> createState() => _SphereState();
@@ -22,19 +21,6 @@ class _SphereState extends State<Sphere> {
 
   @override
   void initState() {
-    // print(pi / (6));
-    // print(
-    //     "decimal:${(Decimal.parse("2.99") / Decimal.parse("100")).toDouble()}");
-    // print("decimal:${Decimal.parse("600.0") / Decimal.parse("3")}");
-    // print(
-    //     "decimal:${(Decimal.parse("600.348582346713249851") / Decimal.parse("3")).toDouble()}");
-    // print("/:${2.99 / 100}");
-    // print("2.99:${2.99}");
-    // print("square:${2.99.square}");
-    // print("*:${2.99 * 2.99}");
-    // print("arcsin 30:${asin(0.5)}");
-    // print("sin 30:${sin(pi / (6))}");
-    // print(2.99);
     var random = Random();
     for (int i = 0; i < widget.starNum; i++) {
       int negative;
@@ -120,8 +106,6 @@ class _SphereState extends State<Sphere> {
   }
 
   Offset getRotateAngle(Offset prePosition, Offset newPosition) {
-    double dx = newPosition.dx - (prePosition.dx);
-    double dy = newPosition.dy - (prePosition.dy);
     double angleZ_Y =
         getProjectionAngle(prePosition.dy, newPosition.dy, sphereRadius);
     double angleZ_X =
@@ -133,8 +117,8 @@ class _SphereState extends State<Sphere> {
   // counterclockwise in z-y clockwise in z-x star angle from y-axis|z-y/x-axis|z-x
   // z-y逆时针计算 z-x顺时针计算 起始角从y轴/x轴算起
   double getProjectionAngle(double preX, double newX, double radius) {
-    double preAngle = acos(preX / (sphereRadius));
-    double newAngle = acos(newX / (sphereRadius));
+    double preAngle = acos(preX / sphereRadius);
+    double newAngle = acos(newX / sphereRadius);
     double angle = newAngle - (preAngle);
     return angle;
   }
@@ -142,18 +126,14 @@ class _SphereState extends State<Sphere> {
   void updateStarList(DragUpdateDetails e, Offset rotateAngle) {
     double newX;
     double newY;
-    double edgePointX;
-    double edgePointY;
-    double newAngle = 0;
     // projection radius 投影半径
     double radiusZ_Y;
     double radiusZ_X;
-    double dx;
-    double dy;
     double initAngleZ_Y = 0;
     double newAngleZ_Y = 0;
     double initAngleZ_X = 0;
     double newAngleZ_X = 0;
+    int num = 1;
     starList.forEach((element) {
       radiusZ_Y = sqrt(element.dist.square - element.x.square);
       radiusZ_X = sqrt(element.dist.square - element.y.square);
@@ -161,27 +141,22 @@ class _SphereState extends State<Sphere> {
           element.y.abs() > radiusZ_Y ? radiusZ_Y * element.y.sign : element.y;
       element.x =
           element.x.abs() > radiusZ_X ? radiusZ_X * element.x.sign : element.x;
-      // print(
-      //     "rotateAngle.dx:${rotateAngle.dx} rotateAngle.dy:${rotateAngle.dy} radiusZ_X:$radiusZ_X radiusZ_Y:$radiusZ_Y");
-      // print("x:${element.x}, y:${element.y}, dist:${element.dist}");
       if (radiusZ_Y == 0) {
         newY = 0;
       } else {
-        initAngleZ_Y = acos(element.y / (radiusZ_Y));
+        initAngleZ_Y = acos(element.y / radiusZ_Y);
         if (element.dist < 0) initAngleZ_Y = 2 * pi - initAngleZ_Y;
         newAngleZ_Y = initAngleZ_Y + rotateAngle.dy;
         newY = radiusZ_Y * (cos(newAngleZ_Y));
       }
       if (radiusZ_X != 0) {
-        initAngleZ_X = acos(element.x / (radiusZ_X));
+        initAngleZ_X = acos(element.x / radiusZ_X);
         if (element.dist < 0) initAngleZ_X = 2 * pi - initAngleZ_X;
         newAngleZ_X = initAngleZ_X + rotateAngle.dx;
         newX = radiusZ_X * cos(newAngleZ_X);
       } else {
         newX = 0;
       }
-      // print(
-      //     "initAngleZ_X:$initAngleZ_X newAngleZ_X:$newAngleZ_X initAngleZ_Y:$initAngleZ_Y newAngleZ_Y:$newAngleZ_Y");
       if (newAngleZ_X * initAngleZ_X < 0 ||
           (newAngleZ_X - pi) * (initAngleZ_X - pi) < 0 ||
           (newAngleZ_X - 2 * pi) * (initAngleZ_X - 2 * pi) < 0 ||
@@ -190,9 +165,18 @@ class _SphereState extends State<Sphere> {
           (newAngleZ_Y - 2 * pi) * (initAngleZ_Y - 2 * pi) < 0) {
         element.dist = -element.dist;
       }
+      double dist = newX.square + newY.square;
       // print("newX:$newX, newY:$newY, dist:${element.dist}");
+      if (dist > element.dist.square) {
+        print('@@oo@@ dist:$dist, element.dist:${element.dist.square}');
+        double ratio = dist / element.dist.square;
+        newX *= ratio;
+        newY *= ratio;
+      }
       element.x = newX;
       element.y = newY;
+      num++;
+      // print("num:$num");
     });
   }
 }
