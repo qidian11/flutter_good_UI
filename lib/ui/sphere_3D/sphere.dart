@@ -7,7 +7,7 @@ double sphereRadius = 300;
 
 class Sphere extends StatefulWidget {
   final int starNum;
-  const Sphere({Key? key, this.starNum = 2}) : super(key: key);
+  const Sphere({Key? key, this.starNum = 200}) : super(key: key);
 
   @override
   State<Sphere> createState() => _SphereState();
@@ -126,9 +126,9 @@ class _SphereState extends State<Sphere> {
   List<double> getRotateAngle(Offset prePosition, Offset newPosition) {
     double angleZ_Y = getAngleZ_Y(prePosition.dy, newPosition.dy, sphereRadius);
     double angleZ_X = getAngleZ_X(prePosition.dx, newPosition.dx, sphereRadius);
-    print("angleZ_Y:$angleZ_Y");
-    print(Offset(0.0, angleZ_Y));
-    print(Offset(0.01, -0.006737888419176885));
+    // print("angleZ_Y:$angleZ_Y");
+    // print(Offset(0.0, angleZ_Y));
+    // print(Offset(0.01, -0.006737888419176885));
     // return Offset(angleZ_X, angleZ_Y);
     return [angleZ_X, angleZ_Y];
     // return Offset(angleZ_X, 0);
@@ -164,21 +164,21 @@ class _SphereState extends State<Sphere> {
     double newAngleZ_Y = 0;
     double initAngleZ_X = 0;
     double newAngleZ_X = 0;
-    int num = 1;
     starList.forEach((element) {
-      radiusZ_Y = sqrt(element.dist.square - element.x.square);
       radiusZ_X = sqrt(element.dist.square - element.y.square);
-      element.y =
-          element.y.abs() > radiusZ_Y ? radiusZ_Y * element.y.sign : element.y;
-      element.x =
-          element.x.abs() > radiusZ_X ? radiusZ_X * element.x.sign : element.x;
+      if (radiusZ_X != 0) {
+        initAngleZ_X = acos((element.x / radiusZ_X));
+        if (element.dist < 0) initAngleZ_X = 2 * pi - initAngleZ_X;
+        newAngleZ_X = initAngleZ_X + rotateAngle[0];
+        newX = radiusZ_X * cos(newAngleZ_X);
+      } else {
+        // 此时垂直于Z_X平面
+        newX = 0;
+      }
+      element.x = newX;
+      radiusZ_Y = sqrt(element.dist.square - element.x.square);
       if (radiusZ_Y == 0) {
         // 此时垂直于X_Y平面
-        // initAngleX_Y = asin(element.y / element.dist);
-        // if (element.x < 0 && element.y > 0) initAngleX_Y = pi - initAngleX_Y;
-        // if (element.x < 0 && element.y < 0) initAngleX_Y = pi - initAngleX_Y;
-        // newAngleX_Y = initAngleX_Y + rotateAngle[1];
-        // newY = element.dist.abs() * (sin(newAngleX_Y));
         newY = 0;
       } else {
         initAngleZ_Y = asin((element.y / radiusZ_Y));
@@ -189,15 +189,7 @@ class _SphereState extends State<Sphere> {
         newAngleZ_Y = initAngleZ_Y + rotateAngle[1];
         newY = radiusZ_Y * (sin(newAngleZ_Y));
       }
-      if (radiusZ_X != 0) {
-        initAngleZ_X = acos((element.x / radiusZ_X));
-        if (element.dist < 0) initAngleZ_X = 2 * pi - initAngleZ_X;
-        newAngleZ_X = initAngleZ_X + rotateAngle[0];
-        newX = radiusZ_X * cos(newAngleZ_X);
-      } else {
-        // 此时垂直于Z_X平面
-        newX = 0;
-      }
+
       if (newAngleZ_X * initAngleZ_X < 0 ||
           (newAngleZ_X - pi) * (initAngleZ_X - pi) < 0 ||
           (newAngleZ_X - 2 * pi) * (initAngleZ_X - 2 * pi) < 0 ||
@@ -206,8 +198,8 @@ class _SphereState extends State<Sphere> {
           (newAngleZ_Y - 3 * pi / 2) * (initAngleZ_Y - 3 * pi / 2) < 0) {
         element.dist = -element.dist;
       }
-      newX = newX.round5;
-      newY = newY.round5;
+      // newX = newX.round5;
+      // newY = newY.round5;
       double dist = newX.square + newY.square;
       if (dist > element.dist.square) {
         print(
@@ -223,8 +215,6 @@ class _SphereState extends State<Sphere> {
       // print("initAngleZ-Y:$initAngleZ_Y newAngleZ_Y:$newAngleZ_Y");
       element.x = newX;
       element.y = newY;
-      num++;
-      // print("num:$num");
     });
     Star star0 = starList[0];
     Star star1 = starList[1];
