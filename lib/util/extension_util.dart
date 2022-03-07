@@ -19,6 +19,7 @@ extension PreciseExtension on Precise {
 
 extension DoubleExtension on double {
   double get square => this * this;
+  double get round5 => (this * pow(10, 5)).round() / pow(10, 5);
   // double get square =>
   //     (Decimal.parse(this.toString()) * Decimal.parse(this.toString()))
   //         .toDouble();
