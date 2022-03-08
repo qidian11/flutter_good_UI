@@ -3,11 +3,19 @@ import "package:flutter/material.dart";
 import 'package:flutter_good_ui/util/extension_util.dart';
 import 'package:decimal/decimal.dart';
 
-double sphereRadius = 300;
+const double sphereRadius = 300;
+const double dP = 0.6;
 
 class Sphere extends StatefulWidget {
   final int starNum;
-  const Sphere({Key? key, this.starNum = 200}) : super(key: key);
+  final Color starColor;
+  final Color starShaderColor;
+  const Sphere(
+      {Key? key,
+      this.starNum = 300,
+      this.starColor = Colors.blue,
+      this.starShaderColor = const Color(0xCC21CCF3)})
+      : super(key: key);
 
   @override
   State<Sphere> createState() => _SphereState();
@@ -21,6 +29,12 @@ class _SphereState extends State<Sphere> {
 
   @override
   void initState() {
+    // remove alpha channel
+    int color = (widget.starColor.alpha << 24 ^ widget.starColor.value);
+    Star.color = color;
+    int shaderColor =
+        (widget.starShaderColor.alpha << 24 ^ widget.starShaderColor.value);
+    Star.shaderColor = shaderColor;
     var random = Random();
     for (int i = 0; i < widget.starNum; i++) {
       int negative;
@@ -29,7 +43,7 @@ class _SphereState extends State<Sphere> {
           random.rangeDouble(2 * sphereRadius / (3), sphereRadius) * negative;
       Offset position = getPosition(random, dist);
       Star star = Star(
-          x: position.dx, y: position.dy, starRadius: random.rangeDouble(1, 5));
+          x: position.dx, y: position.dy, starRadius: random.rangeDouble(3, 5));
       star.dist = dist;
       starList.add(star);
     }
@@ -155,11 +169,8 @@ class _SphereState extends State<Sphere> {
     double newX;
     double newY;
     // projection radius 投影半径
-    double radiusX_Y;
     double radiusZ_Y;
     double radiusZ_X;
-    double initAngleX_Y = 0;
-    double newAngleX_Y = 0;
     double initAngleZ_Y = 0;
     double newAngleZ_Y = 0;
     double initAngleZ_X = 0;
@@ -196,7 +207,7 @@ class _SphereState extends State<Sphere> {
           (newAngleZ_Y - pi / 2) * (initAngleZ_Y - pi / 2) < 0 ||
           (newAngleZ_Y + pi / 2) * (initAngleZ_Y + pi / 2) < 0 ||
           (newAngleZ_Y - 3 * pi / 2) * (initAngleZ_Y - 3 * pi / 2) < 0) {
-        element.dist = -element.dist;
+        element.dist = element.dist;
       }
       // newX = newX.round5;
       // newY = newY.round5;
@@ -253,6 +264,7 @@ class SpherePainter extends CustomPainter {
     // canvas.drawLine(Offset.zero, Offset(0, -sphereRadius), _paint);
     // canvas.drawLine(Offset.zero, Offset(sphereRadius, 0), _paint);
     // canvas.drawLine(Offset.zero, Offset(-sphereRadius, 0), _paint);
+    int alpha = 0xFF;
     starList.forEach((e) {
       if (e.dist < 0) {
         Offset center;
@@ -288,20 +300,31 @@ class SpherePainter extends CustomPainter {
 
         // _paint.color = Colors.blue;
         // depth perspective 纵深透视
-        double dPRatio = (1 - zDist / sphereRadius * 0.2);
-        ovalWidth = dPRatio * e.starRadius * 0.8;
-        ovalHeight = dPRatio * e.starRadius * 0.8;
+        double dPRatio = (1 - zDist / sphereRadius * (1 - dP));
+        alpha = (0xFF * dPRatio).round();
+        ovalWidth = dPRatio * e.starRadius * dP;
+        ovalHeight = dPRatio * e.starRadius * dP;
         ovalWidth = ovalWidth < 1 ? 1 : ovalWidth;
         ovalHeight = ovalHeight < 1 ? 1 : ovalHeight;
         // print(
         //     "e.x:${e.x} e.y:${e.y} e.dist:${e.dist} e.starRadius:${e.starRadius}");
         // print("ovalWidth:$ovalWidth ovalHeight:$ovalHeight dPRatio$dPRatio");
-        _paint.color = Color(0x55CC33CC);
+        _paint.shader = RadialGradient(
+          colors: [
+            Color(alpha << 24 | Star.shaderColor),
+            Color((alpha * 0.5).round() << 24 | Star.shaderColor),
+          ],
+        ).createShader(Rect.fromCircle(
+          center: Offset(0, 0),
+          radius: ovalWidth,
+        ));
         canvas.drawOval(
             Rect.fromCenter(
                 center: center, width: 3 * ovalWidth, height: 3 * ovalHeight),
             _paint);
-        _paint.color = Color(0xFF3345FF);
+        // _paint.color = Color(0xFF3345FF);
+        _paint.shader = null;
+        _paint.color = Color(alpha << 24 | Star.color);
         canvas.drawOval(
             Rect.fromCenter(
                 center: center, width: ovalWidth, height: ovalHeight),
@@ -346,7 +369,7 @@ class SpherePainter extends CustomPainter {
 
         // _paint.color = Color(0xCCFF0000);
         // depth perspective 纵深透视
-        double dPRatio = 1 - (sphereRadius - zDist) / sphereRadius * 0.2;
+        double dPRatio = 1 - (sphereRadius - zDist) / sphereRadius * (1 - dP);
         // ovalWidth = skewPRatio * hPRatio * dPRatio * e.starRadius;
         ovalWidth = dPRatio * e.starRadius;
         ovalHeight = dPRatio * e.starRadius;
@@ -371,6 +394,8 @@ class SpherePainter extends CustomPainter {
 }
 
 class Star {
+  static int color = 0x2196F3;
+  static int shaderColor = 0x21CCF3;
   late double _dist;
   double x;
   double y;
