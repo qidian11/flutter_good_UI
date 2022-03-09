@@ -22,10 +22,10 @@ class Sphere extends StatefulWidget {
 }
 
 class _SphereState extends State<Sphere> {
-  List<Star> starList = [];
   // tap position
   Offset prePosition = Offset(0, 0);
   Offset newPosition = Offset(0, 0);
+  late SphereInfo sphereInfo;
 
   @override
   void initState() {
@@ -35,34 +35,7 @@ class _SphereState extends State<Sphere> {
     int shaderColor =
         (widget.starShaderColor.alpha << 24 ^ widget.starShaderColor.value);
     Star.shaderColor = shaderColor;
-    var random = Random();
-    for (int i = 0; i < widget.starNum; i++) {
-      int negative;
-      negative = random.nextBool() ? 1 : -1;
-      double dist =
-          random.rangeDouble(2 * sphereRadius / (3), sphereRadius) * negative;
-      Offset position = getPosition(random, dist);
-      Star star = Star(
-          x: position.dx, y: position.dy, starRadius: random.rangeDouble(3, 5));
-      star.dist = dist;
-      starList.add(star);
-    }
-    // Star star0 = Star(x: 100, y: 0, starRadius: 5);
-    // Star star1 = Star(x: 200, y: 0, starRadius: 5);
-    // star0.dist = 100;
-    // star1.dist = 200;
-    // starList.add(star0);
-    // starList.add(star1);
-    Star star0 = starList[0];
-    Star star1 = starList[1];
-    double z0 = sqrt(star0.dist.square - star0.x.square - star0.y.square);
-    if (star0.dist < 0) z0 = -z0;
-    double z1 = sqrt(star1.dist.square - star1.x.square - star1.y.square);
-    if (star1.dist < 0) z1 = -z1;
-    double dist = (star0.x - star1.x).square +
-        (star0.y - star1.y).square +
-        (z0 - z1).square;
-    print("star dist init:$dist");
+    sphereInfo = SphereInfo.ring();
     // TODO: implement initState
     super.initState();
   }
@@ -86,39 +59,23 @@ class _SphereState extends State<Sphere> {
         // print("newPosition:$newPosition prePosition:$prePosition");
         // rotateAngle: List[angle in Z-X plane,angle in Z-Y plane]
         List rotateAngle = getRotateAngle(prePosition, newPosition);
-        updateStarList(e, rotateAngle);
+        sphereInfo.updateStarList(rotateAngle);
         prePosition = newPosition;
         setState(() {});
       },
       child: Container(
           width: 2 * sphereRadius,
           height: 2 * sphereRadius,
-          decoration: BoxDecoration(
-              borderRadius: BorderRadius.all(Radius.circular(sphereRadius)),
-              border: Border.all(
-                color: Color(0xFFFFFFFF),
-                width: 1,
-              )),
+          // decoration: BoxDecoration(
+          //     borderRadius: BorderRadius.all(Radius.circular(sphereRadius)),
+          //     border: Border.all(
+          //       color: Color(0xFFFFFFFF),
+          //       width: 1,
+          //     )),
           child: CustomPaint(
-            painter: SpherePainter(starList),
+            painter: SpherePainter(sphereInfo.starList),
           )),
     );
-  }
-
-  Offset getPosition(Random random, double r) {
-    // int negative = random.nextBool() ? 1 : -1;
-    double x = random.rangeDouble(-sphereRadius, sphereRadius);
-    // negative = random.nextBool() ? 1 : -1;
-    double y = random.rangeDouble(
-        (-sphereRadius / (8)).round5, (sphereRadius / (8)).round5);
-    double dist = x.square.round5 + y.square.round5;
-    if (dist > r.square) {
-      double ratio = (r.square.round5 / (dist)).round5;
-      x = (x * (ratio)).round5;
-      y = (y * (ratio)).round5;
-    }
-    // print("x:$x y:$y");
-    return Offset(x, y);
   }
 
   double getAngle(double x, double y) {
@@ -140,12 +97,7 @@ class _SphereState extends State<Sphere> {
   List<double> getRotateAngle(Offset prePosition, Offset newPosition) {
     double angleZ_Y = getAngleZ_Y(prePosition.dy, newPosition.dy, sphereRadius);
     double angleZ_X = getAngleZ_X(prePosition.dx, newPosition.dx, sphereRadius);
-    // print("angleZ_Y:$angleZ_Y");
-    // print(Offset(0.0, angleZ_Y));
-    // print(Offset(0.01, -0.006737888419176885));
-    // return Offset(angleZ_X, angleZ_Y);
     return [angleZ_X, angleZ_Y];
-    // return Offset(angleZ_X, 0);
   }
 
   // 获取在球的投影面上的转动角度
@@ -164,8 +116,76 @@ class _SphereState extends State<Sphere> {
     double angle = newAngle - (preAngle);
     return angle;
   }
+}
 
-  void updateStarList(DragUpdateDetails e, List rotateAngle) {
+enum SphereType { Ring, Sphere }
+
+class SphereInfo {
+  List<Star> starList = [];
+  double sphereRadius;
+  int starNum;
+  late SphereType type;
+  SphereInfo.ring({this.starNum = 200, this.sphereRadius = 300}) {
+    type = SphereType.Ring;
+    Random random = Random();
+    for (int i = 0; i < starNum; i++) {
+      int negative;
+      negative = random.nextBool() ? 1 : -1;
+      double dist =
+          random.rangeDouble(2 * sphereRadius / (3), sphereRadius) * negative;
+      Offset position = getPosition(random, dist, type: SphereType.Ring);
+      Star star = Star(
+          x: position.dx, y: position.dy, starRadius: random.rangeDouble(3, 5));
+      star.dist = dist;
+      starList.add(star);
+    }
+    updateStarList([0, pi / 2]);
+  }
+
+  SphereInfo.sphere({this.starNum = 200, this.sphereRadius = 300}) {
+    type = SphereType.Sphere;
+    Random random = Random();
+    for (int i = 0; i < starNum; i++) {
+      int negative;
+      negative = random.nextBool() ? 1 : -1;
+      double dist = random.rangeDouble(
+              2 * sphereRadius / 3 - sphereRadius / 8, 2 * sphereRadius / 3) *
+          negative;
+      Offset position = getPosition(
+        random,
+        dist,
+      );
+      Star star = Star(
+          x: position.dx, y: position.dy, starRadius: random.rangeDouble(3, 5));
+      star.dist = dist;
+      starList.add(star);
+    }
+  }
+
+  Offset getPosition(Random random, double r,
+      {SphereType type = SphereType.Sphere}) {
+    // int negative = random.nextBool() ? 1 : -1;
+    double x = random.rangeDouble(-sphereRadius, sphereRadius);
+    double y;
+    // negative = random.nextBool() ? 1 : -1;
+    if (type == SphereType.Ring) {
+      y = random.rangeDouble(
+          (-sphereRadius / (8)).round5, (sphereRadius / (8)).round5);
+    } else {
+      y = random.rangeDouble(-sphereRadius, sphereRadius);
+    }
+
+    double dist = x.square.round5 + y.square.round5;
+    if (dist > r.square) {
+      double ratio = (r.square.round5 / (dist)).round5;
+      x = (x * (ratio)).round5;
+      y = (y * (ratio)).round5;
+    }
+    // print("x:$x y:$y");
+    return Offset(x, y);
+  }
+
+  void updateStarList(List rotateAngle) {
     double newX;
     double newY;
     // projection radius 投影半径
@@ -207,7 +227,7 @@ class _SphereState extends State<Sphere> {
           (newAngleZ_Y - pi / 2) * (initAngleZ_Y - pi / 2) < 0 ||
           (newAngleZ_Y + pi / 2) * (initAngleZ_Y + pi / 2) < 0 ||
           (newAngleZ_Y - 3 * pi / 2) * (initAngleZ_Y - 3 * pi / 2) < 0) {
-        element.dist = element.dist;
+        element.dist = -element.dist;
       }
       // newX = newX.round5;
       // newY = newY.round5;
@@ -227,17 +247,23 @@ class _SphereState extends State<Sphere> {
       element.x = newX;
       element.y = newY;
     });
-    Star star0 = starList[0];
-    Star star1 = starList[1];
-    double z0 = sqrt(star0.dist.square - star0.x.square - star0.y.square);
-    if (star0.dist < 0) z0 = -z0;
-    double z1 = sqrt(star1.dist.square - star1.x.square - star1.y.square);
-    if (star1.dist < 0) z1 = -z1;
-    double dist = (star0.x - star1.x).square +
-        (star0.y - star1.y).square +
-        (z0 - z1).square;
-    print("star dist:$dist");
   }
+
+  void ringToSphere() {}
+}
+
+class Star {
+  static int color = 0x2196F3;
+  static int shaderColor = 0x21CCF3;
+  late double _dist;
+  double x;
+  double y;
+  double starRadius;
+
+  double get dist => _dist;
+  set dist(double radius) => _dist = radius;
+
+  Star({required this.x, required this.y, required this.starRadius});
 }
 
 class SpherePainter extends CustomPainter {
@@ -391,18 +417,4 @@ class SpherePainter extends CustomPainter {
     // TODO: implement shouldRepaint
     return true;
   }
-}
-
-class Star {
-  static int color = 0x2196F3;
-  static int shaderColor = 0x21CCF3;
-  late double _dist;
-  double x;
-  double y;
-  double starRadius;
-
-  double get dist => _dist;
-  set dist(double radius) => _dist = radius;
-
-  Star({required this.x, required this.y, required this.starRadius});
 }
