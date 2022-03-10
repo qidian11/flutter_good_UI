@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_good_ui/ui/sphere_3D/sphere.dart';
+import 'package:flutter_good_ui/ui/sphere_3D/sphere_construct.dart';
 
 class My3DSphere extends StatefulWidget {
   static const String name = "My3DSphere";
@@ -49,7 +50,7 @@ class _My3DSphereState extends State<My3DSphere> {
       ),
       backgroundColor: Color(0xFF000000),
       body: const Center(
-        child: Sphere(),
+        child: SphereViewer(),
       ),
     );
   }

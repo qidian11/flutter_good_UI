@@ -1,16 +1,16 @@
 import "dart:math";
 import "package:flutter/material.dart";
 import 'package:flutter_good_ui/util/extension_util.dart';
-import 'package:decimal/decimal.dart';
+import 'package:flutter_good_ui/ui/sphere_3D/sphere_construct.dart';
 
 const double sphereRadius = 300;
 const double dP = 0.6;
 
-class Sphere extends StatefulWidget {
+class SphereViewer extends StatefulWidget {
   final int starNum;
   final Color starColor;
   final Color starShaderColor;
-  const Sphere(
+  const SphereViewer(
       {Key? key,
       this.starNum = 300,
       this.starColor = Colors.blue,
@@ -18,10 +18,10 @@ class Sphere extends StatefulWidget {
       : super(key: key);
 
   @override
-  State<Sphere> createState() => _SphereState();
+  State<SphereViewer> createState() => _SphereViewerState();
 }
 
-class _SphereState extends State<Sphere> {
+class _SphereViewerState extends State<SphereViewer> {
   // tap position
   Offset prePosition = Offset(0, 0);
   Offset newPosition = Offset(0, 0);
@@ -58,7 +58,7 @@ class _SphereState extends State<Sphere> {
         // print('newPosition:$newPosition prePosition:$prePosition');
         // print("newPosition:$newPosition prePosition:$prePosition");
         // rotateAngle: List[angle in Z-X plane,angle in Z-Y plane]
-        List rotateAngle = getRotateAngle(prePosition, newPosition);
+        List<double> rotateAngle = getRotateAngle(prePosition, newPosition);
         sphereInfo.updateStarList(rotateAngle);
         prePosition = newPosition;
         setState(() {});
@@ -73,7 +73,8 @@ class _SphereState extends State<Sphere> {
           //       width: 1,
           //     )),
           child: CustomPaint(
-            painter: SpherePainter(sphereInfo.starList),
+            painter: SpherePainter(sphereInfo.starList,
+                defaultStar: sphereInfo.defaultStar),
           )),
     );
   }
@@ -97,6 +98,7 @@ class _SphereState extends State<Sphere> {
   List<double> getRotateAngle(Offset prePosition, Offset newPosition) {
     double angleZ_Y = getAngleZ_Y(prePosition.dy, newPosition.dy, sphereRadius);
     double angleZ_X = getAngleZ_X(prePosition.dx, newPosition.dx, sphereRadius);
+    return [angleZ_X, 0];
     return [angleZ_X, angleZ_Y];
   }
 
@@ -118,210 +120,10 @@ class _SphereState extends State<Sphere> {
   }
 }
 
-enum SphereType { Ring, Sphere }
-
-class SphereInfo {
-  List<Star> starList = [];
-  // total rotate angle
-  double rotateAngleZ_X = 0.0;
-  double rotateAngleZ_Y = 0.0;
-  double sphereRadius;
-  int starNum;
-  late SphereType type;
-
-  SphereInfo.ring({this.starNum = 200, this.sphereRadius = 300}) {
-    type = SphereType.Ring;
-    Random random = Random();
-    for (int i = 0; i < starNum; i++) {
-      int negative;
-      negative = random.nextBool() ? 1 : -1;
-      double dist =
-          random.rangeDouble(2 * sphereRadius / (3), sphereRadius) * negative;
-      Offset position = getPosition(random, dist, type: SphereType.Ring);
-      Star star = Star(
-          x: position.dx,
-          y: position.dy,
-          starRadius: random.rangeDouble(3, 5),
-          dist: dist);
-      starList.add(star);
-    }
-    // updateStarList([0, pi / 2]);
-  }
-
-  SphereInfo.sphere({this.starNum = 200, this.sphereRadius = 300}) {
-    type = SphereType.Sphere;
-    Random random = Random();
-    for (int i = 0; i < starNum; i++) {
-      int negative;
-      negative = random.nextBool() ? 1 : -1;
-      double dist = random.rangeDouble(
-              2 * sphereRadius / 3 - sphereRadius / 8, 2 * sphereRadius / 3) *
-          negative;
-      Offset position = getPosition(
-        random,
-        dist,
-      );
-      Star star = Star(
-          x: position.dx,
-          y: position.dy,
-          starRadius: random.rangeDouble(3, 5),
-          dist: dist);
-      starList.add(star);
-    }
-  }
-
-  Offset getPosition(Random random, double r,
-      {SphereType type = SphereType.Sphere}) {
-    int sign = random.nextBool() ? 1 : -1;
-    double x = random.rangeDouble(-sphereRadius, sphereRadius);
-    x = x == 0 ? 10.0 * sign : x;
-    double y;
-    // negative = random.nextBool() ? 1 : -1;
-    if (type == SphereType.Ring) {
-      y = random.rangeDouble(
-          (-sphereRadius / 8).round5, (sphereRadius / 8).round5);
-    } else {
-      y = random.rangeDouble(-sphereRadius, sphereRadius);
-    }
-    sign = random.nextBool() ? 1 : -1;
-    y = y == 0 ? 10.0 * sign : y;
-    double dist = x.square.round5 + y.square.round5;
-    if (dist > r.square) {
-      double ratio = (r.square.round5 / (dist)).round5;
-      x = (x * (ratio)).round5;
-      y = (y * (ratio)).round5;
-    }
-    print("x:$x y:$y");
-    return Offset(x, y);
-  }
-
-  void updateStarList(List rotateAngle) {
-    double newX;
-    double newY;
-    // projection radius 投影半径
-    double radiusZ_Y;
-    double radiusZ_X;
-    double initAngleZ_Y = 0;
-    double newAngleZ_Y = 0;
-    // double initAngleZ_X = 0;
-    double newAngleZ_X = 0;
-    starList.forEach((e) {
-      // radiusZ_X = sqrt(e.dist.square - e.y.square);
-      radiusZ_X = sqrt(e.initDist.square - e.initY.square);
-      if (radiusZ_X != 0) {
-        // initAngleZ_X = acos((element.x / radiusZ_X));
-        // if (element.dist < 0) initAngleZ_X = 2 * pi - initAngleZ_X;
-        // newAngleZ_X = initAngleZ_X + rotateAngle[0];
-        newAngleZ_X = e.initAngleZ_X + rotateAngle[0] + rotateAngleZ_X;
-        newX = radiusZ_X * cos(newAngleZ_X);
-      } else {
-        // 此时垂直于Z_X平面
-        newX = 0;
-      }
-      e.x = newX;
-      radiusZ_Y = sqrt(e.initDist.square - e.x.square);
-      if (radiusZ_Y == 0) {
-        // 此时垂直于X_Y平面
-        newY = 0;
-      } else {
-        initAngleZ_Y = asin((e.y / radiusZ_Y));
-        if (e.dist < 0 && e.y > 0) {
-          initAngleZ_Y = pi - initAngleZ_Y;
-        }
-        if (e.dist < 0 && e.y < 0) initAngleZ_Y = pi - initAngleZ_Y;
-        newAngleZ_Y = initAngleZ_Y + rotateAngle[1] + rotateAngleZ_Y;
-        newY = radiusZ_Y * (sin(newAngleZ_Y));
-      }
-      // rotate from back to front or from front to back
-      // 转到背面或者转到正面
-      if (newAngleZ_X * (e.initAngleZ_X + rotateAngleZ_X) < 0 ||
-          (newAngleZ_X - pi) * (e.initAngleZ_X + rotateAngleZ_X - pi) < 0 ||
-          (newAngleZ_X - 2 * pi) * (e.initAngleZ_X + rotateAngleZ_X - 2 * pi) <
-              0 ||
-          (newAngleZ_Y - pi / 2) * (initAngleZ_Y + rotateAngleZ_Y - pi / 2) <
-              0 ||
-          (newAngleZ_Y + pi / 2) * (initAngleZ_Y + rotateAngleZ_Y + pi / 2) <
-              0 ||
-          (newAngleZ_Y - 3 * pi / 2) *
-                  (initAngleZ_Y + rotateAngleZ_Y - 3 * pi / 2) <
-              0) {
-        e.dist = -e.dist;
-      }
-      rotateAngleZ_X += rotateAngle[0];
-      rotateAngleZ_Y += rotateAngle[1];
-      rotateAngleZ_X =
-          rotateAngleZ_X > 2 * pi ? rotateAngleZ_X - 2 * pi : rotateAngleZ_X;
-      rotateAngleZ_X =
-          rotateAngleZ_X < -2 * pi ? rotateAngleZ_X + 2 * pi : rotateAngleZ_X;
-      rotateAngleZ_Y =
-          rotateAngleZ_Y > 2 * pi ? rotateAngleZ_Y - 2 * pi : rotateAngleZ_Y;
-      rotateAngleZ_Y =
-          rotateAngleZ_Y < -2 * pi ? rotateAngleZ_Y + 2 * pi : rotateAngleZ_Y;
-      double dist = newX.square + newY.square;
-      if (dist > e.dist.square) {
-        print("rotateAngleZ_X:$rotateAngleZ_X rotateAngleZ_Y:$rotateAngleZ_Y");
-        // print(
-        //     "超出范围 x:${e.x} y:${e.y} newX:$newX newY:$newY initAngleZ_X:${e.initAngleZ_X} newAngleZ_X:$newAngleZ_X initAngleZ_Y:${e.initAngleZ_Y} newAngleZ_Y:$newAngleZ_Y");
-        double ratio = sqrt(e.dist.square / dist);
-        newX *= ratio;
-        newY *= ratio;
-      }
-      // print("x:${element.x}, y:${element.x}, dist:${element.dist}");
-      // print("newX:$newX, newY:$newY, dist:${element.dist}");
-      // print("rotateAngle:$rotateAngle");
-      // print("initAngleZ-X:$initAngleZ_X newAngleZ_X:$newAngleZ_X");
-      // print("initAngleZ-Y:$initAngleZ_Y newAngleZ_Y:$newAngleZ_Y");
-      e.x = newX;
-      e.y = newY;
-    });
-  }
-
-  void ringToSphere() {}
-}
-
-class Star {
-  static int color = 0x2196F3;
-  static int shaderColor = 0x21CCF3;
-  double dist;
-  late double _initDist;
-  late double _initX;
-  double x;
-  late double _initY;
-  double y;
-  late double _initAngleZ_X;
-  late double _initAngleZ_Y;
-  double starRadius;
-
-  double get initAngleZ_X => _initAngleZ_X;
-  double get initAngleZ_Y => _initAngleZ_Y;
-  double get initX => _initX;
-  double get initY => _initY;
-  double get initDist => _initDist;
-
-  Star(
-      {required this.x,
-      required this.y,
-      required this.starRadius,
-      required this.dist}) {
-    _initX = x;
-    _initY = y;
-    _initDist = dist;
-    double radiusZ_X = sqrt(dist.square - y.square);
-    _initAngleZ_X = acos((x / radiusZ_X));
-    if (dist < 0) _initAngleZ_X = 2 * pi - _initAngleZ_X;
-    double radiusZ_Y = sqrt(dist.square - x.square);
-
-    _initAngleZ_Y = asin((y / radiusZ_Y));
-    if (dist < 0 && y > 0) {
-      _initAngleZ_Y = pi - _initAngleZ_Y;
-    }
-    if (dist < 0 && y < 0) _initAngleZ_Y = pi - _initAngleZ_Y;
-  }
-}
-
 class SpherePainter extends CustomPainter {
   late Size size;
   List<Star> starList;
+  Star defaultStar;
   Paint _paint = Paint()
     ..isAntiAlias = true
     // ..style = PaintingStyle.stroke
@@ -329,7 +131,7 @@ class SpherePainter extends CustomPainter {
     ..strokeWidth = 0.5
     ..color = Colors.white;
 
-  SpherePainter(this.starList);
+  SpherePainter(this.starList, {required this.defaultStar});
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -338,12 +140,13 @@ class SpherePainter extends CustomPainter {
 
     this.size = size;
     canvas.translate(width / 2, height / 2);
-    _paint.color = Color(0xFFFFFFFF);
-    // canvas.drawLine(Offset.zero, Offset(0, sphereRadius), _paint);
-    // canvas.drawLine(Offset.zero, Offset(0, -sphereRadius), _paint);
-    // canvas.drawLine(Offset.zero, Offset(sphereRadius, 0), _paint);
-    // canvas.drawLine(Offset.zero, Offset(-sphereRadius, 0), _paint);
+    _paint.color = Color(0xFFFFFF66);
+    canvas.drawLine(Offset.zero, Offset(0, sphereRadius), _paint);
+    canvas.drawLine(Offset.zero, Offset(0, -sphereRadius), _paint);
+    canvas.drawLine(Offset.zero, Offset(sphereRadius, 0), _paint);
+    canvas.drawLine(Offset.zero, Offset(-sphereRadius, 0), _paint);
     int alpha = 0xFF;
+    canvas.drawCircle(Offset(defaultStar.x, defaultStar.y), 5, _paint);
     starList.forEach((e) {
       if (e.dist < 0) {
         Offset center;
