@@ -122,9 +122,13 @@ enum SphereType { Ring, Sphere }
 
 class SphereInfo {
   List<Star> starList = [];
+  // total rotate angle
+  double rotateAngleZ_X = 0.0;
+  double rotateAngleZ_Y = 0.0;
   double sphereRadius;
   int starNum;
   late SphereType type;
+
   SphereInfo.ring({this.starNum = 200, this.sphereRadius = 300}) {
     type = SphereType.Ring;
     Random random = Random();
@@ -135,11 +139,13 @@ class SphereInfo {
           random.rangeDouble(2 * sphereRadius / (3), sphereRadius) * negative;
       Offset position = getPosition(random, dist, type: SphereType.Ring);
       Star star = Star(
-          x: position.dx, y: position.dy, starRadius: random.rangeDouble(3, 5));
-      star.dist = dist;
+          x: position.dx,
+          y: position.dy,
+          starRadius: random.rangeDouble(3, 5),
+          dist: dist);
       starList.add(star);
     }
-    updateStarList([0, pi / 2]);
+    // updateStarList([0, pi / 2]);
   }
 
   SphereInfo.sphere({this.starNum = 200, this.sphereRadius = 300}) {
@@ -156,32 +162,36 @@ class SphereInfo {
         dist,
       );
       Star star = Star(
-          x: position.dx, y: position.dy, starRadius: random.rangeDouble(3, 5));
-      star.dist = dist;
+          x: position.dx,
+          y: position.dy,
+          starRadius: random.rangeDouble(3, 5),
+          dist: dist);
       starList.add(star);
     }
   }
 
   Offset getPosition(Random random, double r,
       {SphereType type = SphereType.Sphere}) {
-    // int negative = random.nextBool() ? 1 : -1;
+    int sign = random.nextBool() ? 1 : -1;
     double x = random.rangeDouble(-sphereRadius, sphereRadius);
+    x = x == 0 ? 10.0 * sign : x;
     double y;
     // negative = random.nextBool() ? 1 : -1;
     if (type == SphereType.Ring) {
       y = random.rangeDouble(
-          (-sphereRadius / (8)).round5, (sphereRadius / (8)).round5);
+          (-sphereRadius / 8).round5, (sphereRadius / 8).round5);
     } else {
       y = random.rangeDouble(-sphereRadius, sphereRadius);
     }
-
+    sign = random.nextBool() ? 1 : -1;
+    y = y == 0 ? 10.0 * sign : y;
     double dist = x.square.round5 + y.square.round5;
     if (dist > r.square) {
       double ratio = (r.square.round5 / (dist)).round5;
       x = (x * (ratio)).round5;
       y = (y * (ratio)).round5;
     }
-    // print("x:$x y:$y");
+    print("x:$x y:$y");
     return Offset(x, y);
   }
 
@@ -193,49 +203,66 @@ class SphereInfo {
     double radiusZ_X;
     double initAngleZ_Y = 0;
     double newAngleZ_Y = 0;
-    double initAngleZ_X = 0;
+    // double initAngleZ_X = 0;
     double newAngleZ_X = 0;
-    starList.forEach((element) {
-      radiusZ_X = sqrt(element.dist.square - element.y.square);
+    starList.forEach((e) {
+      // radiusZ_X = sqrt(e.dist.square - e.y.square);
+      radiusZ_X = sqrt(e.initDist.square - e.initY.square);
       if (radiusZ_X != 0) {
-        initAngleZ_X = acos((element.x / radiusZ_X));
-        if (element.dist < 0) initAngleZ_X = 2 * pi - initAngleZ_X;
-        newAngleZ_X = initAngleZ_X + rotateAngle[0];
+        // initAngleZ_X = acos((element.x / radiusZ_X));
+        // if (element.dist < 0) initAngleZ_X = 2 * pi - initAngleZ_X;
+        // newAngleZ_X = initAngleZ_X + rotateAngle[0];
+        newAngleZ_X = e.initAngleZ_X + rotateAngle[0] + rotateAngleZ_X;
         newX = radiusZ_X * cos(newAngleZ_X);
       } else {
         // 此时垂直于Z_X平面
         newX = 0;
       }
-      element.x = newX;
-      radiusZ_Y = sqrt(element.dist.square - element.x.square);
+      e.x = newX;
+      radiusZ_Y = sqrt(e.initDist.square - e.x.square);
       if (radiusZ_Y == 0) {
         // 此时垂直于X_Y平面
         newY = 0;
       } else {
-        initAngleZ_Y = asin((element.y / radiusZ_Y));
-        if (element.dist < 0 && element.y > 0) {
+        initAngleZ_Y = asin((e.y / radiusZ_Y));
+        if (e.dist < 0 && e.y > 0) {
           initAngleZ_Y = pi - initAngleZ_Y;
         }
-        if (element.dist < 0 && element.y < 0) initAngleZ_Y = pi - initAngleZ_Y;
-        newAngleZ_Y = initAngleZ_Y + rotateAngle[1];
+        if (e.dist < 0 && e.y < 0) initAngleZ_Y = pi - initAngleZ_Y;
+        newAngleZ_Y = initAngleZ_Y + rotateAngle[1] + rotateAngleZ_Y;
         newY = radiusZ_Y * (sin(newAngleZ_Y));
       }
-
-      if (newAngleZ_X * initAngleZ_X < 0 ||
-          (newAngleZ_X - pi) * (initAngleZ_X - pi) < 0 ||
-          (newAngleZ_X - 2 * pi) * (initAngleZ_X - 2 * pi) < 0 ||
-          (newAngleZ_Y - pi / 2) * (initAngleZ_Y - pi / 2) < 0 ||
-          (newAngleZ_Y + pi / 2) * (initAngleZ_Y + pi / 2) < 0 ||
-          (newAngleZ_Y - 3 * pi / 2) * (initAngleZ_Y - 3 * pi / 2) < 0) {
-        element.dist = -element.dist;
+      // rotate from back to front or from front to back
+      // 转到背面或者转到正面
+      if (newAngleZ_X * (e.initAngleZ_X + rotateAngleZ_X) < 0 ||
+          (newAngleZ_X - pi) * (e.initAngleZ_X + rotateAngleZ_X - pi) < 0 ||
+          (newAngleZ_X - 2 * pi) * (e.initAngleZ_X + rotateAngleZ_X - 2 * pi) <
+              0 ||
+          (newAngleZ_Y - pi / 2) * (initAngleZ_Y + rotateAngleZ_Y - pi / 2) <
+              0 ||
+          (newAngleZ_Y + pi / 2) * (initAngleZ_Y + rotateAngleZ_Y + pi / 2) <
+              0 ||
+          (newAngleZ_Y - 3 * pi / 2) *
+                  (initAngleZ_Y + rotateAngleZ_Y - 3 * pi / 2) <
+              0) {
+        e.dist = -e.dist;
       }
-      // newX = newX.round5;
-      // newY = newY.round5;
+      rotateAngleZ_X += rotateAngle[0];
+      rotateAngleZ_Y += rotateAngle[1];
+      rotateAngleZ_X =
+          rotateAngleZ_X > 2 * pi ? rotateAngleZ_X - 2 * pi : rotateAngleZ_X;
+      rotateAngleZ_X =
+          rotateAngleZ_X < -2 * pi ? rotateAngleZ_X + 2 * pi : rotateAngleZ_X;
+      rotateAngleZ_Y =
+          rotateAngleZ_Y > 2 * pi ? rotateAngleZ_Y - 2 * pi : rotateAngleZ_Y;
+      rotateAngleZ_Y =
+          rotateAngleZ_Y < -2 * pi ? rotateAngleZ_Y + 2 * pi : rotateAngleZ_Y;
       double dist = newX.square + newY.square;
-      if (dist > element.dist.square) {
-        print(
-            "超出范围 x:${element.x} y:${element.y} newX:$newX newY:$newY initAngleZ_X:$initAngleZ_X newAngleZ_X:$newAngleZ_X initAngleZ_Y:$initAngleZ_Y newAngleZ_Y:$newAngleZ_Y");
-        double ratio = sqrt(element.dist.square / dist);
+      if (dist > e.dist.square) {
+        print("rotateAngleZ_X:$rotateAngleZ_X rotateAngleZ_Y:$rotateAngleZ_Y");
+        // print(
+        //     "超出范围 x:${e.x} y:${e.y} newX:$newX newY:$newY initAngleZ_X:${e.initAngleZ_X} newAngleZ_X:$newAngleZ_X initAngleZ_Y:${e.initAngleZ_Y} newAngleZ_Y:$newAngleZ_Y");
+        double ratio = sqrt(e.dist.square / dist);
         newX *= ratio;
         newY *= ratio;
       }
@@ -244,8 +271,8 @@ class SphereInfo {
       // print("rotateAngle:$rotateAngle");
       // print("initAngleZ-X:$initAngleZ_X newAngleZ_X:$newAngleZ_X");
       // print("initAngleZ-Y:$initAngleZ_Y newAngleZ_Y:$newAngleZ_Y");
-      element.x = newX;
-      element.y = newY;
+      e.x = newX;
+      e.y = newY;
     });
   }
 
@@ -255,15 +282,41 @@ class SphereInfo {
 class Star {
   static int color = 0x2196F3;
   static int shaderColor = 0x21CCF3;
-  late double _dist;
+  double dist;
+  late double _initDist;
+  late double _initX;
   double x;
+  late double _initY;
   double y;
+  late double _initAngleZ_X;
+  late double _initAngleZ_Y;
   double starRadius;
 
-  double get dist => _dist;
-  set dist(double radius) => _dist = radius;
+  double get initAngleZ_X => _initAngleZ_X;
+  double get initAngleZ_Y => _initAngleZ_Y;
+  double get initX => _initX;
+  double get initY => _initY;
+  double get initDist => _initDist;
 
-  Star({required this.x, required this.y, required this.starRadius});
+  Star(
+      {required this.x,
+      required this.y,
+      required this.starRadius,
+      required this.dist}) {
+    _initX = x;
+    _initY = y;
+    _initDist = dist;
+    double radiusZ_X = sqrt(dist.square - y.square);
+    _initAngleZ_X = acos((x / radiusZ_X));
+    if (dist < 0) _initAngleZ_X = 2 * pi - _initAngleZ_X;
+    double radiusZ_Y = sqrt(dist.square - x.square);
+
+    _initAngleZ_Y = asin((y / radiusZ_Y));
+    if (dist < 0 && y > 0) {
+      _initAngleZ_Y = pi - _initAngleZ_Y;
+    }
+    if (dist < 0 && y < 0) _initAngleZ_Y = pi - _initAngleZ_Y;
+  }
 }
 
 class SpherePainter extends CustomPainter {
